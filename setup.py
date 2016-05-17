@@ -17,6 +17,6 @@ setup(
     ],
     entry_points='''
         [console_scripts]
-        freeze=freeze:cli
+        hotbackup=hotbackup:cli
     ''',
 )
