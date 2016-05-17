@@ -6,7 +6,7 @@ import logging
 import datetime
 import boto3
 
-from hotbackup.utility import save_config, load_config, write_encrypted
+from hotbackup.utility import save_config, load_config, write_encrypted, read_encrypted
 from hotbackup.services import get_aws_client
 
 
@@ -44,7 +44,15 @@ def restore(filename, password):
   config = load_config()
   client = get_aws_client(config)
 
+  out_filename = filename
+  if filename.endswith('.enc'):
+    out_filename = filename[:-4]
+
   client.download_file(config['s3_default_bucket'], filename, filename)
+  response = read_encrypted(password, filename, False)
+
+  with open(out_filename, 'wb') as output:
+    output.write(response)
 
   log.info('Restore completed.')
 
@@ -69,10 +77,13 @@ def backup(filepath, password):
   now = datetime.datetime.utcnow()
   stored_filename = '{0}.{1}'.format(filename, now.strftime('%Y%m%d-%H%M%S'))
 
+  with open(filepath, 'rb') as input:
+    ciphertext = input.read()
+
   if password:
     log.info('Encrypting file...')
     stored_filename = '{0}.enc'.format(stored_filename)
-    filepath = write_encrypted(password, stored_filename, filepath)
+    filepath = write_encrypted(password, stored_filename, ciphertext)
     encrypted = True
 
   client.upload_file(filepath, config['s3_default_bucket'], stored_filename)
