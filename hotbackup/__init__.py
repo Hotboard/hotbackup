@@ -44,15 +44,23 @@ def restore(filename, password):
   config = load_config()
   client = get_aws_client(config)
 
+  encrypted = False
   out_filename = filename
   if filename.endswith('.enc'):
     out_filename = filename[:-4]
+    encrypted = True
 
+  log.info('Downloading file...')
   client.download_file(config['s3_default_bucket'], filename, filename)
-  response = read_encrypted(password, filename, False)
 
-  with open(out_filename, 'wb') as output:
-    output.write(response)
+  if encrypted:
+    log.info('Decrypting file...')
+    response = read_encrypted(password, filename, False)
+
+    with open(out_filename, 'wb') as output:
+      output.write(response)
+
+    os.remove(filename) #remove the encrypted file we just downloaded
 
   log.info('Restore completed.')
 
@@ -86,7 +94,9 @@ def backup(filepath, password):
     filepath = write_encrypted(password, stored_filename, ciphertext)
     encrypted = True
 
+  log.info('Uploading file...')
   client.upload_file(filepath, config['s3_default_bucket'], stored_filename)
+
   log.info('File backup completed.')
 
 
