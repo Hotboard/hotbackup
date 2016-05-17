@@ -61,17 +61,19 @@ def backup(filepath, password):
 
 @cli.command()
 def list():
-  """List all files in the default S3 Bucket"""
+  """List all files in the default S3 Bucket."""
   log.info('Listing files.')
 
   config = load_config()
   client = get_aws_client(config)
 
   response = client.list_objects(Bucket=config['s3_default_bucket'])
+  log.debug(response)
 
   log.info('{0: <30}\t{1: <25}\t{2}'.format('Name', 'Last Modified', 'Size (bytes)'))
   for f in response.get('Contents', dict()):
-    log.info('{0: <30}\t{1!s: <25s}\t{2}'.format(f['Key'], f['LastModified'], f['Size']))
+    if not f['Key'].startswith('logs/'):
+      log.info('{0: <30}\t{1!s: <25s}\t{2}'.format(f['Key'], f['LastModified'], f['Size']))
 
 
 @cli.command()
