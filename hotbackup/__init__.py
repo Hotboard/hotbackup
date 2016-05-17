@@ -6,7 +6,7 @@ import logging
 import datetime
 import boto3
 
-from hotbackup.utility import save_config, load_config, write_encrypted
+from hotbackup.utility import save_config, load_config, write_encrypted, read_encrypted
 from hotbackup.services import get_aws_client
 
 
@@ -31,6 +31,42 @@ def cli(debug):
 
 
 @cli.command()
+@click.argument('filename')
+@click.option('--password', type=str, help='Optional password used to decrypt the file.')
+def restore(filename, password):
+  """Restores a file from Amazon S3.
+
+  filename: The name of the file to download and restore.
+
+  """
+  log.info('Initiating file restore.')
+
+  config = load_config()
+  client = get_aws_client(config)
+
+  encrypted = False
+  out_filename = filename
+  if filename.endswith('.enc'):
+    out_filename = filename[:-4]
+    encrypted = True
+
+  log.info('Downloading file...')
+  client.download_file(config['s3_default_bucket'], filename, filename)
+
+  if encrypted:
+    log.info('Decrypting file...')
+    response = read_encrypted(password, filename, False)
+
+    with open(out_filename, 'wb') as output:
+      output.write(response)
+
+    os.remove(filename) #remove the encrypted file we just downloaded
+
+  log.info('Restore completed.')
+
+
+
+@cli.command()
 @click.argument('filepath')
 @click.option('--password', type=str, help='Optional password used for encrypting the file.')
 def backup(filepath, password):
@@ -49,13 +85,18 @@ def backup(filepath, password):
   now = datetime.datetime.utcnow()
   stored_filename = '{0}.{1}'.format(filename, now.strftime('%Y%m%d-%H%M%S'))
 
+  with open(filepath, 'rb') as input:
+    ciphertext = input.read()
+
   if password:
     log.info('Encrypting file...')
     stored_filename = '{0}.enc'.format(stored_filename)
-    filepath = write_encrypted(password, stored_filename, filepath)
+    filepath = write_encrypted(password, stored_filename, ciphertext)
     encrypted = True
 
+  log.info('Uploading file...')
   client.upload_file(filepath, config['s3_default_bucket'], stored_filename)
+
   log.info('File backup completed.')
 
 

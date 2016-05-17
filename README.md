@@ -69,7 +69,7 @@ hotbackup list
 ```
 
 
-### Upload a file
+### Backup a file
 
 To simply upload a file to the default configured bucket just invoke.
 
@@ -81,6 +81,21 @@ To encrypt and upload a file to the default configured bucket you will need to p
 
 ```python
 hotbackup backup filetobackup.tmp --password mypass
+```
+
+
+### Restore a file
+
+To restore an encrypted file
+
+```python
+hotbackup restore filetorestore.enc --password mypass
+```
+
+To restore an plain text file
+
+```python
+hotbackup restore filetorestore.txt
 ```
 
 
