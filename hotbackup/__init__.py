@@ -55,7 +55,7 @@ def backup(filepath, password):
     filepath = write_encrypted(password, stored_filename, filepath)
     encrypted = True
 
-  client.upload_file(filepath, 'swipster-backup', stored_filename)
+  client.upload_file(filepath, config['s3_default_bucket'], stored_filename)
   log.info('File backup completed.')
 
 
@@ -68,10 +68,11 @@ def configure():
     config['aws_access_key'] = click.prompt('AWS Access Key', type=str)
     config['aws_secret_key'] = click.prompt('AWS Secret Key', type=str)
     config['aws_region_name'] = click.prompt('AWS Region Name', type=str)
+    config['s3_default_bucket'] = click.prompt('S3 Default Bucket Name', type=str)
 
     save_config(config)
   except KeyboardInterrupt:
     log.error('\nOperation cancelled by user.')
 
-  log.info('Configuring file saved.')
+  log.info('Configuration file saved.')
 
