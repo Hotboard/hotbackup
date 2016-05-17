@@ -77,3 +77,4 @@ def write_encrypted(password, filename, data):
     output.write(ciphertext)
     log.debug('Encrypted file {0}'.format(output.name))
     return output.name
+

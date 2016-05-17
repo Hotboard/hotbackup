@@ -7,6 +7,7 @@ import datetime
 import boto3
 
 from hotbackup.utility import save_config, load_config, write_encrypted
+from hotbackup.services import get_aws_client
 
 
 __version__ = '0.0.1'
@@ -39,15 +40,14 @@ def backup(filepath, password):
 
   """
   log.info('Initiating file backup.')
-  filename = os.path.basename(filepath)
-  config = load_config()
-  client = boto3.client('s3', region_name=config['aws_region_name'],
-                              aws_access_key_id=config['aws_access_key'],
-                              aws_secret_access_key=config['aws_secret_key'])
 
+  config = load_config()
+  client = get_aws_client(config)
+
+  filename = os.path.basename(filepath)
   encrypted = False
   now = datetime.datetime.utcnow()
-  stored_filename = '{0}.{1}'.format(filename, now.strftime('%Y%m%d%H%M%S'))
+  stored_filename = '{0}.{1}'.format(filename, now.strftime('%Y%m%d-%H%M%S'))
 
   if password:
     log.info('Encrypting file...')
@@ -57,6 +57,23 @@ def backup(filepath, password):
 
   client.upload_file(filepath, config['s3_default_bucket'], stored_filename)
   log.info('File backup completed.')
+
+
+@cli.command()
+def list():
+  """List all files in the default S3 Bucket."""
+  log.info('Listing files.')
+
+  config = load_config()
+  client = get_aws_client(config)
+
+  response = client.list_objects(Bucket=config['s3_default_bucket'])
+  log.debug(response)
+
+  log.info('{0: <30}\t{1: <25}\t{2}'.format('Name', 'Last Modified', 'Size (bytes)'))
+  for f in response.get('Contents', dict()):
+    if not f['Key'].startswith('logs/'):
+      log.info('{0: <30}\t{1!s: <25s}\t{2}'.format(f['Key'], f['LastModified'], f['Size']))
 
 
 @cli.command()
