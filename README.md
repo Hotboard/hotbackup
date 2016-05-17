@@ -71,13 +71,13 @@ hotbackup list
 
 ### Upload a file
 
-To simply upload a file to the default configured vault just invoke.
+To simply upload a file to the default configured bucket just invoke.
 
 ```python
 hotbackup backup filetobackup.tmp
 ```
 
-To encrypt and upload a file to the default configured vault you will need to provide a password.
+To encrypt and upload a file to the default configured bucket you will need to provide a password.
 
 ```python
 hotbackup backup filetobackup.tmp --password mypass
