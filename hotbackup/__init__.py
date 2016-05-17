@@ -31,6 +31,26 @@ def cli(debug):
 
 
 @cli.command()
+@click.argument('filename')
+@click.option('--password', type=str, help='Optional password used to decrypt the file.')
+def restore(filename, password):
+  """Restores a file from Amazon S3.
+
+  filename: The name of the file to download and restore.
+
+  """
+  log.info('Initiating file restore.')
+
+  config = load_config()
+  client = get_aws_client(config)
+
+  client.download_file(config['s3_default_bucket'], filename, filename)
+
+  log.info('Restore completed.')
+
+
+
+@cli.command()
 @click.argument('filepath')
 @click.option('--password', type=str, help='Optional password used for encrypting the file.')
 def backup(filepath, password):
