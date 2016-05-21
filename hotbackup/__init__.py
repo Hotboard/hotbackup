@@ -7,6 +7,8 @@ import datetime
 import boto3
 import tarfile
 
+from shutil import copyfile
+
 from hotbackup.utility import save_config, load_config, write_encrypted, read_encrypted
 from hotbackup.services import get_aws_client
 
@@ -69,7 +71,7 @@ def restore(filename, password):
 
 @cli.command()
 @click.argument('filepath')
-@click.option('--compress/--no-compress', default=False, help='Optional if the file or dir be compressed.')
+@click.option('--compress/--no-compress', default=True, help='Optional if the file or dir be compressed. Selected by default.')
 @click.option('--password', type=str, help='Optional password used for encrypting the file.')
 def backup(filepath, compress, password):
   """Backup a file to Amazon AWS S3.
@@ -80,7 +82,7 @@ def backup(filepath, compress, password):
   log.info('Initiating backup.')
 
   if not compress and os.path.isdir(os.path.abspath(filepath)):
-    log.info('No-compress flag set on directory. Aborting!')
+    log.info('Uncompressed directories cannot be backed up. Aborting!')
     return
 
   config = load_config()
@@ -89,25 +91,40 @@ def backup(filepath, compress, password):
   encrypted = False
   name = os.path.basename(os.path.abspath(filepath))
   now = datetime.datetime.utcnow()
-  stored_filename = '{0}.{1}.tgz'.format(name, now.strftime('%Y%m%d-%H%M%S'))
 
-  log.info('Compressing...')
-  with tarfile.open(stored_filename, 'w:gz') as tar:
-    tar.add(filepath, arcname=name)
+  filename_format = '{0}.{1}.tgz'
+  if not compress:
+    filename_format = '{0}.{1}'
 
-  with open(stored_filename, 'rb') as input:
-    ciphertext = input.read()
+  file_to_upload = filename_format.format(name, now.strftime('%Y%m%d%H%M%S'))
+
+  if compress:
+    log.info('Compressing...')
+    with tarfile.open(file_to_upload, 'w:gz') as tar:
+      tar.add(filepath, arcname=name)
+  else:
+    log.info('Copying and renaming file.')
+    copyfile(filepath, file_to_upload)
+
+  filepath = file_to_upload
 
   if password:
     log.info('Encrypting...')
-    stored_filename = '{0}.enc'.format(stored_filename)
-    filepath = write_encrypted(password, stored_filename, ciphertext)
+    with open(filepath, 'rb') as input:
+      ciphertext = input.read()
+
+    encrypted_filename = '{0}.enc'.format(filepath)
+    encrypted_file = write_encrypted(password, encrypted_filename, ciphertext)
     encrypted = True
+    filepath = encrypted_file
 
   log.info('Uploading...')
-  client.upload_file(filepath, config['s3_default_bucket'], stored_filename)
+  client.upload_file(filepath, config['s3_default_bucket'], filepath)
 
-  log.info('Backup completed.')
+  os.remove(file_to_upload)
+  os.remove(encrypted_filename)
+
+  log.info('Backup completed for {0}'.format(filepath))
 
 
 @cli.command()
