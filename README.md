@@ -14,6 +14,7 @@ A simple utility to save backups to Amazon S3. Currently in initial development.
 
 
 
+
 ## Installation for developers (w/ venv)
 
 ```bash
@@ -41,6 +42,7 @@ Commands:
   backup     Backup a file to Amazon AWS S3.
   configure  Amazon AWS Configuration.
   list       List all files in the default S3 Bucket.
+  restore    Restores a file from Amazon S3.
 ```
 
 
