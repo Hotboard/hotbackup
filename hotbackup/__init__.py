@@ -36,6 +36,36 @@ def cli(debug):
 @cli.command()
 @click.argument('filename')
 @click.option('--password', type=str, help='Optional password used to decrypt the file.')
+def decrypt(filename, password):
+  """Decrypts a previously downloaded backup file from Amazon S3.
+
+  filename: The name of the file to download and restore.
+
+  """
+  log.info('Decrypting file...')
+
+  out_filename = filename
+  if filename.endswith('.enc'):
+    out_filename = filename[:-4]
+    encrypted = True
+
+  if not encrypted:
+    log.info('Backup does not appear to be encrypted.')
+    return
+
+  response = read_encrypted(password, filename, False)
+  with open(out_filename, 'wb') as output:
+    output.write(response)
+
+  os.remove(filename) #remove the encrypted file we just downloaded
+
+  log.info('Decryption completed.')
+
+
+
+@cli.command()
+@click.argument('filename')
+@click.option('--password', type=str, help='Optional password used to decrypt the file.')
 def restore(filename, password):
   """Restores a file from Amazon S3.
 
@@ -47,14 +77,14 @@ def restore(filename, password):
   config = load_config()
   client = get_aws_client(config)
 
+  log.info('Downloading file...')
+  client.download_file(config['s3_default_bucket'], filename, filename)
+
   encrypted = False
   out_filename = filename
   if filename.endswith('.enc'):
     out_filename = filename[:-4]
     encrypted = True
-
-  log.info('Downloading file...')
-  client.download_file(config['s3_default_bucket'], filename, filename)
 
   if encrypted:
     log.info('Decrypting file...')
